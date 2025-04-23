@@ -8,14 +8,9 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.boot.runApplication
 import org.springframework.stereotype.Component
 import java.io.FileInputStream
-@Component
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
-class AndroidAppApplication{
-
-}
-
+class AndroidAppApplication
 
 fun main(args: Array<String>) {
-
 	runApplication<AndroidAppApplication>(*args)
 }
