@@ -18,8 +18,5 @@ import kotlin.io.encoding.Base64
 class BookingController(
     private val bookingService: BookingService
 ) {
-    @PostMapping("/book")
-    fun bookSeat(@RequestBody request: BookingRequest): BookingResponse{
-        return bookingService.createBooking(request)
-    }
+
 }

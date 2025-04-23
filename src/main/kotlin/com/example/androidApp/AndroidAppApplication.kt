@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 import org.springframework.boot.runApplication
 import org.springframework.stereotype.Component
+import java.io.FileInputStream
 @Component
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
 class AndroidAppApplication{
