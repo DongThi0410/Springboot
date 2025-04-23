@@ -7,19 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 import org.springframework.boot.runApplication
 import org.springframework.stereotype.Component
-import java.io.FileInputStream
 @Component
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
 class AndroidAppApplication{
-    init {
-        if (FirebaseApp.getApps().isEmpty()){
-            val serviceAcc = FileInputStream("src/main/resources/serviceAccountKey.json")
-            val options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAcc))
-                .build()
-            FirebaseApp.initializeApp(options)
-        }
-    }
+
 }
 
 
