@@ -24,5 +24,6 @@ class AndroidAppApplication{
 
 
 fun main(args: Array<String>) {
+
 	runApplication<AndroidAppApplication>(*args)
 }
