@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository
 
 interface BookingSeatRepository : JpaRepository<BookingSeat, Int> {
     fun findByShowtimeId(showtimeId: Int): List<BookingSeat>
+    fun findByBookingId(bookingId: Int): List<BookingSeat>
+    fun findBySeatIdAndShowtimeId(seatId: Int, showtimeId: Int): BookingSeat?
 }

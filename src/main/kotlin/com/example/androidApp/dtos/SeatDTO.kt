@@ -7,7 +7,6 @@ data class SeatDTO(
     val col: Int,
     val state: Int,
     val row: String,
-    val isReserved: Boolean,
     val type: SeatType,
     val price: Double
 )

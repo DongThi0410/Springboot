@@ -22,8 +22,6 @@ class SeatController(private val seatService: SeatService) {
     }
 
 
-
-
     @PostMapping("/hold")
     fun holdSeat(@RequestBody request: HoldSeatReq): ResponseEntity<String> {
         return if (seatService.holdSeat(request)) {

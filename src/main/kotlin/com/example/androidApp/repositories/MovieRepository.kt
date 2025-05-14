@@ -8,5 +8,7 @@ import org.springframework.stereotype.Repository
 
 interface MovieRepository : JpaRepository<Movie, Int> {
     fun getMoviesByCateId(id: Int): List<Movie>
+    fun existsMovieByTitle(name: String): Boolean
+    fun findByTitleContainingIgnoreCaseOrDirectorContainingIgnoreCaseOrCastContainingIgnoreCase(query: String, query1: String, query2: String): List<Movie>
 }
 

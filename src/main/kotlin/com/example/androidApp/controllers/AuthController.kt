@@ -2,23 +2,19 @@ package com.example.androidApp.controllers
 
 import com.example.androidApp.dtos.*
 import com.example.androidApp.models.User
+import com.example.androidApp.models.VerificationToken
+import com.example.androidApp.services.EmailService
 import com.example.androidApp.services.UserService
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseToken
-import com.google.firebase.auth.UserRecord
-import io.jsonwebtoken.Claims
-import io.jsonwebtoken.ExpiredJwtException
+import com.example.androidApp.services.VerificationTokenService
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.MalformedJwtException
 import org.springframework.http.ResponseEntity
 import java.util.*
 import io.jsonwebtoken.security.Keys
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.*
-import java.security.SignatureException
+import java.time.LocalDateTime
 import javax.crypto.SecretKey
 
 
@@ -27,7 +23,9 @@ import javax.crypto.SecretKey
 @CrossOrigin(origins = ["http://localhost:3000", "http://localhost:4200"])
 
 class AuthController(
-    private val userService: UserService
+    private val userService: UserService,
+    private val verificationTokenService: VerificationTokenService,
+    private val emailService: EmailService
 ) {
 
     private val secretKey: SecretKey = Keys.hmacShaKeyFor("your-very-secret-key-your-secret-key-here".toByteArray())
@@ -70,16 +68,16 @@ class AuthController(
 
                 userService.save(user)
 
-                val firebaseUser = FirebaseAuth.getInstance().createUser(
-                    UserRecord.CreateRequest()
-                        .setEmail(body.email)
-                        .setPassword(body.password)
-                        .setPhoneNumber("+84" + body.phone)
-                        .setDisplayName(body.name)
+                val token = VerificationToken(
+                    token = UUID.randomUUID().toString(),
+                    user = user,
+                    expiryDate = LocalDateTime.now().plusMinutes(10)
                 )
+                verificationTokenService.save(token)
 
+                emailService.sendVerificationEmail(user.email, token.token)
 
-                ResponseEntity.ok(Message("Đăng ký thành công!"))
+                ResponseEntity.ok(Message("Thực hiện xác thực tại email của bạn!"))
             }
     }
 
@@ -90,14 +88,16 @@ class AuthController(
         if (!user.checkPassword(body.password)) {
             return ResponseEntity.badRequest().body(Message("Mật khẩu không đúng "))
         }
-        val role = user.role.firstOrNull() ?: "USER"
+        if (!user.enabled)
+            return ResponseEntity.badRequest().body(Message("Không tồn tại người dùng"))
+        val role = user.role
 
         val jwt = Jwts.builder()
             .setSubject(user.id.toString())
             .claim("email", user.email)
             .claim("role", "ROLE_$role")
             .setIssuedAt(Date())
-            .setExpiration(Date(System.currentTimeMillis()+1000*20*60*24))
+            .setExpiration(Date(System.currentTimeMillis() + 1000 * 20 * 60 * 24))
             .signWith(secretKey)
             .compact()
 
@@ -105,11 +105,67 @@ class AuthController(
         cookie.isHttpOnly = true
 
         response.addCookie(cookie)
+
 //        val customToken = FirebaseAuth.getInstance().createCustomToken(user.id.toString())
 
-        return ResponseEntity.ok(AuthDTO(jwt, user.id))
+        return ResponseEntity.ok(AuthDTO(jwt, user.id, role))
 
     }
 
 
+
+    @GetMapping("/auth/verify")
+    fun verify(@RequestParam token: String): ResponseEntity<Any> {
+        val vToken = verificationTokenService.findByToken(token)
+            ?: return ResponseEntity.badRequest().body("Token không hợp lệ")
+
+        // Debug log để kiểm tra token và expiry date
+        println("Token found: $vToken, Expiry: ${vToken.expiryDate}")
+
+        if (vToken.expiryDate.isBefore(LocalDateTime.now())) {
+            userService.delete(vToken.user)
+            return ResponseEntity.badRequest().body("Token đã hết hạn, vui lòng đăng ký lại để nhận email mới")
+        }
+
+        val user = vToken.user
+        if (user.enabled) {
+            return ResponseEntity.badRequest().body("Tài khoản đã được xác thực trước đó")
+        }
+
+        user.enabled = true
+        userService.save(user)
+
+        verificationTokenService.delete(vToken)
+        return ResponseEntity.ok("Xác minh thành công! Tài khoản đã được kích hoạt.")
+    }
+
+    @PostMapping("/auth/forgot-password")
+    fun sendOtp(@RequestBody request: ForgotPasswordRequest): ResponseEntity<String>{
+        return try {
+            userService.sendOtp(request.email)
+            ResponseEntity.ok("Mã OTP đã được gửi, hãy kiểm tra email của bạn.")
+        }catch (e: Exception){
+            ResponseEntity.status(500).body("Loi ${e.message}")
+        }
+    }
+    @PostMapping("/auth/reset-password")
+    fun resetPassword(@RequestBody request: ResetPasswordRequest):  ResponseEntity<String>{
+        return try {
+            userService.resetPassword(request)
+            ResponseEntity.ok("Dat lai mat khau thanh cong")
+        }catch (e: Exception){
+            ResponseEntity.badRequest().body("Loi ${e.message}")
+        }
+    }
+
+
 }
+
+data class ForgotPasswordRequest(
+    val email: String
+)
+data class ResetPasswordRequest(
+    val email: String,
+    val otp: String,
+    val newPassword: String
+)

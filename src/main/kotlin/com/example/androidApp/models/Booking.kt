@@ -23,7 +23,11 @@ data class Booking(
 
     val total: Double,
     var status: Int = 0,
-    val qrUrl: String,
+    var qrUrl: String,
+
+
+    @Column(name = "payment_time")
+    var paymentTime: String? = null ,
 
     @CreationTimestamp
     @Column(name = "created_at")

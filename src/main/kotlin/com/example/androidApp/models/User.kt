@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import jakarta.persistence.*
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "users")
@@ -17,15 +18,21 @@ class User {
     var name = ""
 
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    val role: Set<Role> = emptySet()
+    val role = "USER"
 
     @Column(unique = true)
     var email = ""
 
+    @OneToMany(mappedBy = "user")
+    @JsonIgnore
+    val tickets: List<Ticket> = mutableListOf()
+
+    @Column(name = "enabled")
+    var enabled: Boolean = false
     @Column(unique = true)
     var phone = ""
-
+    var otp: String? = null
+    var otpExpiresAt: LocalDateTime? = null
     @Column
     var password = ""
         @JsonIgnore
@@ -44,9 +51,3 @@ class User {
 
 
 }
-
-@Entity
-data class Role(
-    @Id @GeneratedValue val id: Int = 0,
-    val name: String
-)

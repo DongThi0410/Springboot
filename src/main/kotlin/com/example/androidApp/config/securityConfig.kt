@@ -26,8 +26,9 @@ class securityConfig {
             .csrf{ it.disable() }
             .authorizeHttpRequests{ auth ->
                 auth
-                    .requestMatchers("/auth/**", "/public/**", "/payment").permitAll()
-                    .requestMatchers("/user/**").hasRole("USER")
+                    .requestMatchers("/auth/**", "/public/**", "/sepay/**", "/sw/**","/api/revenue", "/api/revenue/**", "/movie/**").permitAll()
+                    .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+                    .requestMatchers("/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .formLogin { it.disable() }

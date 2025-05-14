@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import java.io.FileInputStream
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
 class AndroidAppApplication {
-	fun main(args: Array<String>) {
-		runApplication<AndroidAppApplication>(*args)
-	}
+
+}fun main(args: Array<String>) {
+	runApplication<AndroidAppApplication>(*args)
 }

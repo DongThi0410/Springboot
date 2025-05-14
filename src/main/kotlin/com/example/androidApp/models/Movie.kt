@@ -1,5 +1,6 @@
 package com.example.androidApp.models
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import jakarta.persistence.*
 import java.time.LocalDate
 
@@ -25,6 +26,8 @@ class Movie {
     @JoinColumn(name = "category_id", referencedColumnName = "id", nullable = false)
     var cate: Category? = null
 
+
+
     @Column(nullable = false)
     var duration: Int = 0
 
@@ -34,15 +37,21 @@ class Movie {
     @Column(nullable = false, length = 255)
     var cast: String = ""
 
-    @Column(nullable = false)
-    var rating: Float = 0.0f
+    @Column(nullable = false, length = 255)
+    var trailer: String = ""
+
+    @Column(name = "deleted")
+    var deleted: Boolean = false
+
 
     @Column(nullable = false, length = 255)
     var director: String = ""
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(nullable = false)
-    var start_date: LocalDate? = null
+    var startDate: LocalDate? = null
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(nullable = false)
-    var end_date: LocalDate? = null
+    var endDate: LocalDate? = null
 }
