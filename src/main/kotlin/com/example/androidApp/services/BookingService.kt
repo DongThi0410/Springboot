@@ -56,9 +56,9 @@ class BookingService(
     }
 
     fun generateVietQRUrl(total: Double, info: String): String {
-        val accNumb = "0934961226"
+        val accNumb = "4720259259999"
         val base = "http://img.vietqr.io/image"
-        val bankCode = "BIDV"
+        val bankCode = "MB"
         return "$base/$bankCode-$accNumb-print.png?amount=$total&addInfo=$info"
     }
 
@@ -171,6 +171,9 @@ class BookingService(
         return true
     }
 
+    fun getPaidSeats(showtimeId: Long): Int{
+        return bookingSeatRepository.countPaidSeatsByShowtimeId(showtimeId)
+    }
 
 //    fun getAllTicket(userId: Int):
 }

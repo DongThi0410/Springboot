@@ -8,6 +8,7 @@ import com.example.androidApp.models.Movie
 import com.example.androidApp.repositories.CateRepository
 import com.example.androidApp.repositories.GenreRepo
 import com.example.androidApp.repositories.MovieRepository
+import com.example.androidApp.repositories.RateRepository
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 
@@ -15,15 +16,23 @@ import java.time.LocalDate
 class MovieService(
     private val movieRepository: MovieRepository,
     private val cateRepository: CateRepository,
-    private val genreRepo: GenreRepo
+    private val genreRepo: GenreRepo,
+    private val rateRepository: RateRepository
 ) {
     fun getAllMovies(): List<Movie> {
-
-        return movieRepository.findAll().filterNot { it.deleted }
+        val movies = movieRepository.findAll().filterNot { it.deleted }
+                return movies.map { movie ->
+                    val avg = rateRepository.findAverageRatingByMovieId(movie.id) ?: 0.0
+                    movie.avg = avg
+                    movie
+                }
     }
 
     fun getMoviesByCate(id: Int): List<Movie> {
-        return movieRepository.getMoviesByCateId(id).ifEmpty { emptyList() }
+        return movieRepository.getMoviesByCateId(id)
+            .filterNot { it.deleted }
+            .ifEmpty { emptyList() }
+
     }
 
     fun getMovieById(id: Int): Movie? {
@@ -86,12 +95,17 @@ class MovieService(
         }
     }
 
-    fun search(query: String): List<Movie>{
-        return movieRepository.findByTitleContainingIgnoreCaseOrDirectorContainingIgnoreCaseOrCastContainingIgnoreCase(query, query, query)
+    fun search(query: String): List<Movie> {
+        return movieRepository.findByTitleContainingIgnoreCaseOrDirectorContainingIgnoreCaseOrCastContainingIgnoreCase(
+            query,
+            query,
+            query
+        )
 
     }
 
 }
+
 data class MovieSearch(
     val id: Int,
     val title: String,

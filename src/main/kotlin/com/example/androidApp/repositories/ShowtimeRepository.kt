@@ -23,4 +23,5 @@ interface ShowtimeRepository: JpaRepository<Showtime, Int> {
     @Query(value = "SELECT DISTINCT DATE(start_time) FROM showtime WHERE movie_id = :movieId AND start_time BETWEEN :start AND :end", nativeQuery = true)
     fun findUpcomingShowtimeDates(movieId: Int, start: LocalDate, end: LocalDate): List<java.sql.Date>
 
+    fun findByAuditorium(auditorium: Auditorium): List<Showtime>
 }

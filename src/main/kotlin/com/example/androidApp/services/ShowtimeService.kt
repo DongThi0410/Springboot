@@ -11,6 +11,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
+import java.util.ArrayDeque
+
 @Service
 class ShowtimeService(
     private val movieRepository: MovieRepository,
@@ -19,60 +21,67 @@ class ShowtimeService(
 ) {
     private val BREAK_TIME_MINUTES = 15
 
-    fun scheduleShowtimes(startTime: LocalDateTime, endTime: LocalDateTime) {
+    fun scheduleShowtimes(fromDate: LocalDate, toDate: LocalDate, dailyStart: LocalTime, dailyEnd: LocalTime) {
         val movies = movieRepository.findAll()
         val auditoriums = auditoriumRepository.findAll()
 
         if (movies.isEmpty() || auditoriums.isEmpty()) return
 
-        // Khởi tạo thời gian chiếu sớm nhất cho mỗi phòng
-        val auditoriumTimes = auditoriums.associateWith { startTime }.toMutableMap()
+        val movieQueue = ArrayDeque(movies)
+        for (date in fromDate.datesUntil(toDate.plusDays(1))) {
 
-        while (auditoriumTimes.any { (_, time) -> time.isBefore(endTime) }) {
-            for (auditorium in auditoriums) {
-                val nextAvailableTime = auditoriumTimes[auditorium] ?: continue
-                if (nextAvailableTime.isAfter(endTime)) continue
+            val dayStart = LocalDateTime.of(date, dailyStart)
+            val dayEnd = LocalDateTime.of(date, dailyEnd)
+            val auditoriumTimes = auditoriums.associateWith { dayStart }.toMutableMap()
+            while (auditoriumTimes.any { (_, time) -> time.isBefore(dayEnd) }) {
+                for (auditorium in auditoriums) {
+                    val nextAvailableTime = auditoriumTimes[auditorium] ?: continue
+                    if (nextAvailableTime.isAfter(dayEnd)) continue
 
-                val movie = movies.randomOrNull() ?: continue
-                val movieEndTime = nextAvailableTime.plusMinutes(movie.duration.toLong())
+                    val movie = movieQueue.removeFirst() ?: continue
+                    val movieEndTime = nextAvailableTime.plusMinutes(movie.duration.toLong())
 
-                // Kiểm tra phòng chiếu có trống không
-                if (isAuditoriumAvailable(auditorium, nextAvailableTime, movie.duration)) {
-                    val showtime = Showtime(
-                        movie = movie,
-                        auditorium = auditorium,
-                        startTime = nextAvailableTime,
-                        endTime = movieEndTime
-                    )
-                    showtimeRepository.save(showtime)
-                    println("🎬 Scheduled '${movie.title}' in '${auditorium.name}' at $nextAvailableTime")
+                    if (isAuditoriumAvailable(auditorium, nextAvailableTime, movie.duration)) {
+                        val showtime = Showtime(
+                            movie = movie,
+                            auditorium = auditorium,
+                            startTime = nextAvailableTime,
+                            endTime = movieEndTime
+                        )
+                        showtimeRepository.save(showtime)
+                        println("🎬 Scheduled '${movie.title}' in '${auditorium.name}' at $nextAvailableTime")
 
-                    // Cập nhật thời gian suất chiếu tiếp theo
-                    auditoriumTimes[auditorium] = movieEndTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
-                } else {
-                    // Nếu không khả dụng, tìm thời gian mới
-                    auditoriumTimes[auditorium] = nextAvailableTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
+                        auditoriumTimes[auditorium] = movieEndTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
+                    } else {
+                        auditoriumTimes[auditorium] = nextAvailableTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
+                    }
+                    movieQueue.addLast(movie)
                 }
             }
         }
 
         val allShowtimes = showtimeRepository.findAll()
         println("📅 Lịch chiếu đã lưu vào DB:")
-        allShowtimes.forEach {
-            println("${it.movie.title} | ${it.auditorium.name} | ${it.startTime} - ${it.endTime}")
-        }
+
     }
 
 
     private fun isAuditoriumAvailable(auditorium: Auditorium, startTime: LocalDateTime, movieDuration: Int): Boolean {
-        val existingShowtimes = showtimeRepository.findByAuditoriumAndStartTimeBetween(
-            auditorium,
-            startTime.minusMinutes(1),
-            startTime.plusMinutes(movieDuration + BREAK_TIME_MINUTES.toLong())
-        )
-        return existingShowtimes.isEmpty()
+        val endTime = startTime.plusMinutes((movieDuration + BREAK_TIME_MINUTES).toLong())
+        val showtimes = showtimeRepository.findByAuditorium(auditorium)
+        return showtimes.none() { exist ->
+            val existingStart = exist.startTime
+            val existingEnd = exist.endTime
+            (startTime< existingEnd) && (endTime > existingStart)
+
+        }
     }
-    fun getShowtimesByMovieAndDate(movieId: Int, startTime: LocalDateTime, endTime: LocalDateTime): ResponseEntity<List<Showtime>> {
+
+    fun getShowtimesByMovieAndDate(
+        movieId: Int,
+        startTime: LocalDateTime,
+        endTime: LocalDateTime
+    ): ResponseEntity<List<Showtime>> {
         val showtimes = showtimeRepository.findByMovieIdAndStartTimeBetween(movieId, startTime, endTime)
         return ResponseEntity.ok(showtimes)
 
@@ -86,7 +95,8 @@ class ShowtimeService(
         return showtimeRepository.findUpcomingShowtimeDates(movieId, today, threeDaysLater)
             .map { it.toLocalDate() }
     }
-    fun getShowtimeById(showtimeId: Int): Showtime?{
+
+    fun getShowtimeById(showtimeId: Int): Showtime? {
         return showtimeRepository.findById(showtimeId).orElse(null)
     }
 

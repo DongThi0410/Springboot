@@ -40,6 +40,10 @@ class RatingService(
             )
         }
     }
+//
+//    fun getAverage(movieId: Int): Double{
+//        return rateRepo.findAverageRatingByMovieId(movieId)
+//    }
 }
 
 data class RatingDTO(

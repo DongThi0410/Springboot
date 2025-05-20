@@ -12,7 +12,7 @@ data class MovieDTO(
     val duration: Int,
     val poster: String,
     val cast: String,
-    val rating: Float,
+    val rating: Double,
     val director: String,
     val startDate: LocalDate,
     val endDate: LocalDate

@@ -54,4 +54,7 @@ class Movie {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(nullable = false)
     var endDate: LocalDate? = null
+
+    @Transient
+    var avg : Double = 0.0
 }
