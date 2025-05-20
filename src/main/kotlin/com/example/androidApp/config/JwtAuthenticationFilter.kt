@@ -18,6 +18,10 @@ class JwtAuthenticationFilter : OncePerRequestFilter() {
 
     private val secretKey: SecretKey = Keys.hmacShaKeyFor("your-very-secret-key-your-secret-key-here".toByteArray())
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        val path = request.servletPath
+        return path.startsWith("/sepay/")
+    }
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
