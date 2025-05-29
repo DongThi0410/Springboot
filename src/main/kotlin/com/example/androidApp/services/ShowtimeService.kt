@@ -65,6 +65,55 @@ class ShowtimeService(
 
     }
 
+    fun scheduleByMovie(
+        movieId: Int,
+        fromDate: LocalDate,
+        toDate: LocalDate,
+        dailyStart: LocalTime,
+        dailyEnd: LocalTime
+    ) {
+        val auditoriums = auditoriumRepository.findAll()
+        val movie = movieRepository.findById(movieId)
+            .orElseThrow { Exception("Không tồn tại phim") }
+
+        if (auditoriums.isEmpty()) return
+
+        for (date in fromDate.datesUntil(toDate.plusDays(1))) {
+            val dayStart = LocalDateTime.of(date, dailyStart)
+            val dayEnd = LocalDateTime.of(date, dailyEnd)
+            val audTimes = auditoriums.associateWith { dayStart }.toMutableMap()
+
+            while (audTimes.any { (_, time) -> time.isBefore(dayEnd) }) {
+                for (aud in auditoriums) {
+                    val nextAvailTime = audTimes[aud] ?: continue
+                    if (nextAvailTime.isAfter(dayEnd)) continue
+
+                    val movieEndTime = nextAvailTime.plusMinutes(movie.duration.toLong())
+                    if (movieEndTime.isAfter(dayEnd)) {
+                        audTimes[aud] = dayEnd.plusDays(1) // Dừng luôn
+                        continue
+                    }
+
+                    if (isAuditoriumAvailable(aud, nextAvailTime, movie.duration)) {
+                        val showtime = Showtime(
+                            movie = movie,
+                            auditorium = aud,
+                            startTime = nextAvailTime,
+                            endTime = movieEndTime
+                        )
+                        showtimeRepository.save(showtime)
+                        println("🎬 Đã tạo suất chiếu '${movie.title}' tại '${aud.name}' lúc $nextAvailTime")
+
+                        audTimes[aud] = movieEndTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
+                    } else {
+                        // Nếu chưa sẵn sàng, nhảy thêm 15 phút rồi thử lại
+                        audTimes[aud] = nextAvailTime.plusMinutes(BREAK_TIME_MINUTES.toLong())
+                    }
+                }
+            }
+        }
+    }
+
 
     private fun isAuditoriumAvailable(auditorium: Auditorium, startTime: LocalDateTime, movieDuration: Int): Boolean {
         val endTime = startTime.plusMinutes((movieDuration + BREAK_TIME_MINUTES).toLong())
@@ -72,7 +121,7 @@ class ShowtimeService(
         return showtimes.none() { exist ->
             val existingStart = exist.startTime
             val existingEnd = exist.endTime
-            (startTime< existingEnd) && (endTime > existingStart)
+            (startTime < existingEnd) && (endTime > existingStart)
 
         }
     }

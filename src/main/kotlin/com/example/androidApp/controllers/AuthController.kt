@@ -120,7 +120,7 @@ class AuthController(
             ?: return ResponseEntity.badRequest().body("Token không hợp lệ")
 
         // Debug log để kiểm tra token và expiry date
-        println("Token found: $vToken, Expiry: ${vToken.expiryDate}")
+        println("Token : $vToken, Expiry: ${vToken.expiryDate}")
 
         if (vToken.expiryDate.isBefore(LocalDateTime.now())) {
             userService.delete(vToken.user)
